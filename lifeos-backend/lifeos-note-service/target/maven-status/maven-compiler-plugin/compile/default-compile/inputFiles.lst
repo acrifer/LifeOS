@@ -1,0 +1,9 @@
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\service\impl\NoteServiceImpl.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\mapper\NoteMapper.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\NoteApplication.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\domain\entity\Note.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\domain\dto\NoteUpdateDTO.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\controller\NoteController.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\domain\dto\NoteCreateDTO.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\service\NoteService.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-note-service\src\main\java\com\lifeos\note\config\ShardingSphereConfig.java

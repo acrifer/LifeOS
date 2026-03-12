@@ -1,0 +1,23 @@
+dataSources:
+  ds0:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: ${MYSQL_JDBC_URL:jdbc:mysql://127.0.0.1:3306/lifeos?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:123}
+rules:
+- !SHARDING
+  tables:
+    note:
+      actualDataNodes: ds0.note_$->{0..3}
+      tableStrategy:
+        standard:
+          shardingColumn: user_id
+          shardingAlgorithmName: note_inline
+  shardingAlgorithms:
+    note_inline:
+      type: INLINE
+      props:
+        algorithm-expression: note_$->{user_id % 4}
+props:
+  sql-show: true

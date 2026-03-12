@@ -1,0 +1,61 @@
+server:
+  port: ${LIFEOS_GATEWAY_PORT:8080}
+
+spring:
+  application:
+    name: lifeos-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+      discovery:
+        locator:
+          enabled: true # 开启从注册中心动态创建路由的功能
+          lower-case-service-id: true
+      routes:
+        - id: lifeos-user-service
+          uri: lb://lifeos-user-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+        - id: lifeos-task-service
+          uri: lb://lifeos-task-service
+          predicates:
+            - Path=/api/task/**
+          filters:
+            - StripPrefix=1
+        - id: lifeos-note-service
+          uri: lb://lifeos-note-service
+          predicates:
+            - Path=/api/note/**
+          filters:
+            - StripPrefix=1
+        - id: lifeos-ai-service
+          uri: lb://lifeos-ai-service
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+        - id: lifeos-behavior-service
+          uri: lb://lifeos-behavior-service
+          predicates:
+            - Path=/api/behavior/**
+          filters:
+            - StripPrefix=1

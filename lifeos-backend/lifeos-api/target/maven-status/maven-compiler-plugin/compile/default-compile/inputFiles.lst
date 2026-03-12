@@ -1,0 +1,9 @@
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\ai\client\AiFeignClient.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\ai\dto\AiSummaryCommand.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\ai\dto\AiSummaryResult.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\ai\dto\NoteInternalUpdateSummaryDTO.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\behavior\dto\BehaviorEventCommand.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\behavior\dto\DashboardStatsDTO.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\behavior\dto\BehaviorTrendItemDTO.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\ai\client\NoteFeignClient.java
+C:\Users\crifer\Desktop\LifeOS\lifeos-backend\lifeos-api\src\main\java\com\lifeos\api\behavior\client\BehaviorFeignClient.java
