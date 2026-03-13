@@ -9,12 +9,37 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 public class JwtUtil {
-    
-    // A secure key for HS256 algorithm (at least 256 bits/32 characters)
-    private static final String SECRET_KEY_STR = "LifeOS_Secret_Key_LifeOS_Secret_Key_LifeOS_Secret_Key";
-    private static final long EXPIRATION_TIME = 86400000; // 24 hours
+
+    private static final String SECRET_KEY_STR = getRequiredSetting("LIFEOS_JWT_SECRET");
+    private static final long EXPIRATION_TIME = getLongSetting("LIFEOS_JWT_EXPIRATION_MS", 86400000L);
+
+    private static String getRequiredSetting(String name) {
+        String value = System.getProperty(name);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(name);
+        }
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(name + " must be configured.");
+        }
+        if (value.length() < 32) {
+            throw new IllegalStateException(name + " must be at least 32 characters long.");
+        }
+        return value;
+    }
+
+    private static long getLongSetting(String name, long defaultValue) {
+        String value = System.getProperty(name);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(name);
+        }
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return Long.parseLong(value);
+    }
 
     private static Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY_STR.getBytes(StandardCharsets.UTF_8));
@@ -29,6 +54,7 @@ public class JwtUtil {
 
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .setId(UUID.randomUUID().toString())
                 .claim("username", username)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
@@ -60,6 +86,10 @@ public class JwtUtil {
             return Long.parseLong(claims.getSubject());
         }
         return null;
+    }
+
+    public static long getExpirationTimeMs() {
+        return EXPIRATION_TIME;
     }
     
     /**

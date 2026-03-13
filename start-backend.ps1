@@ -8,9 +8,26 @@ Assert-Dependencies
 Build-SharedModules
 
 $results = New-Object System.Collections.Generic.List[object]
+$startedServices = New-Object System.Collections.Generic.List[object]
 
-foreach ($service in Get-ServiceDefinitions) {
-    $results.Add((Start-BackendService -Service $service))
+try {
+    foreach ($service in Get-ServiceDefinitions) {
+        $result = Start-BackendService -Service $service
+        $results.Add($result)
+        if ($result.Status -eq "started") {
+            $startedServices.Add($service)
+        }
+    }
+} catch {
+    Write-Host "[rollback] Backend startup failed. Stopping services started in this run..."
+    foreach ($service in ($startedServices | Sort-Object Port -Descending)) {
+        try {
+            [void](Stop-BackendService -Service $service)
+        } catch {
+            Write-Warning "Failed to stop $($service.Name) during rollback: $($_.Exception.Message)"
+        }
+    }
+    throw
 }
 
 Write-Host ""

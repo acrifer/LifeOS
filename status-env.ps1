@@ -7,6 +7,6 @@ Ensure-EnvironmentLayout
 Assert-RequiredPaths
 
 Write-Host "Environment status"
-Get-EnvironmentStatus | Format-Table -AutoSize
+Get-EnvironmentStatus | Format-Table Name, Port, Reachable, PortPid, ManagedMode, ManagedPid, ManagedProcessAlive -AutoSize
 Write-Host ""
 Write-Host "Logs: $script:LogRoot"

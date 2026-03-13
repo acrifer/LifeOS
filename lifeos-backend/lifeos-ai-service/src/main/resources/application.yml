@@ -7,10 +7,15 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        server-addr: ${NACOS_SERVER_ADDR}
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAMESRV_ADDR}
+  producer:
+    group: ${spring.application.name}-producer
 
 lifeos:
   ai:
     base-url: ${LIFEOS_AI_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
-    api-key: ${LIFEOS_AI_API_KEY:}
+    api-key: ${LIFEOS_AI_API_KEY:LIFEOS_AI_API_KEY}
     model: ${LIFEOS_AI_MODEL:glm-4.5-air}

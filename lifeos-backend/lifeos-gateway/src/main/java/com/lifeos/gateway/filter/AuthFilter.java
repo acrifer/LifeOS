@@ -40,6 +40,10 @@ public class AuthFilter implements GlobalFilter, Ordered {
     static {
         whiteList.add("/api/user/login");
         whiteList.add("/api/user/register");
+        whiteList.add("/swagger-ui.html");
+        whiteList.add("/swagger-ui/**");
+        whiteList.add("/v3/api-docs/**");
+        whiteList.add("/service-docs/**");
     }
 
     @Override

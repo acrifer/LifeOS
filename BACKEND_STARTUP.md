@@ -14,6 +14,7 @@
 ## Environment Layout
 - All startup scripts and backend services read settings from the project root `.env`.
 - Use `.env.example` as the template when you need a new local configuration.
+- `.env` must define `MYSQL_JDBC_URL`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `NACOS_SERVER_ADDR`, and `LIFEOS_JWT_SECRET`.
 - `MySQL` is started by Docker Compose from `docker-compose.infrastructure.yml` when `3306` is not already occupied.
 - `Redis` is started from the local `redis-server.exe` if available; otherwise the script falls back to Docker Compose.
 - `Nacos` is started from `C:\environment\nacos`.
@@ -43,9 +44,14 @@
 ## Notes
 - Logs are written to `.runtime/logs/`.
 - Script-managed process IDs are stored in `.runtime/pids/`.
+- Unified Swagger UI is available through the gateway:
+  - `http://127.0.0.1:8080/swagger-ui.html`
+  - Aggregated OpenAPI JSON is exposed at `/service-docs/user`, `/service-docs/note`, `/service-docs/task`, `/service-docs/ai`, and `/service-docs/behavior`.
+- The repository now standardizes text files on `UTF-8`. If your editor asks for an encoding, choose `UTF-8`.
+- Keep `.env` local only. `LIFEOS_JWT_SECRET` should be at least 32 characters, and `LIFEOS_AI_API_KEY` can be left empty to use the local mock summary fallback.
 - If a service port is already in use, the start script treats that service as already running and skips it.
 - The start script installs `lifeos-common` and `lifeos-api` into the local Maven repository before launching services.
 - `note-service` uses the current ShardingSphere-compatible startup configuration and must be started through the repaired Maven setup.
 - `lifeos-ai-service` is now managed by the one-click backend script on port `8084`.
 - If `lifeos.ai.api-key` is empty, `lifeos-ai-service` falls back to a local mock summary.
-- `RocketMQ` here is for local development only; the current codebase includes RocketMQ dependencies but does not yet contain active producers/consumers.
+- `RocketMQ` is now used for behavior events: `note-service` and `task-service` publish events, and `behavior-service` consumes them asynchronously.

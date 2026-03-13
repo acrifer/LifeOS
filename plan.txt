@@ -1,11 +1,9 @@
-powershell -ExecutionPolicy Bypass -File .\start-backend.ps1
-powershell -ExecutionPolicy Bypass -File .\status-backend.ps1
-powershell -ExecutionPolicy Bypass -File .\stop-backend.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-env.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\stop-env.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-all.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\stop-all.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\status-all.ps1
 
-powershell -ExecutionPolicy Bypass -File .\start-env.ps1
-powershell -ExecutionPolicy Bypass -File .\stop-env.ps1
-powershell -ExecutionPolicy Bypass -File .\status-env.ps1
-powershell -ExecutionPolicy Bypass -File .\start-all.ps1
 下面给你一套 完整、结构清晰、适合写进简历的项目设计。
 目标是做一个 业务清晰 + 技术合理 + 面试可讲深度 的项目。
 

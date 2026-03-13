@@ -10,5 +10,6 @@ public class TaskUpdateDTO {
     private String description;
     private Date deadline;
     private String tags;
+    private Long sourceNoteId;
     private Integer status;
 }

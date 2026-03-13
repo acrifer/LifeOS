@@ -1,8 +1,11 @@
 package com.lifeos.note.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.lifeos.api.ai.dto.AiSummaryResult;
+import com.lifeos.api.ai.dto.AiAsyncJobDTO;
 import com.lifeos.note.domain.dto.NoteCreateDTO;
+import com.lifeos.note.domain.dto.NotePinDTO;
+import com.lifeos.note.domain.dto.NoteReviewDTO;
+import com.lifeos.note.domain.dto.NoteSearchQueryDTO;
 import com.lifeos.note.domain.dto.NoteUpdateDTO;
 import com.lifeos.note.domain.entity.Note;
 
@@ -20,9 +23,17 @@ public interface NoteService extends IService<Note> {
 
     List<Note> listUserNotes(Long userId);
 
-    List<Note> searchNotes(Long userId, String keyword);
+    List<Note> searchNotes(Long userId, NoteSearchQueryDTO query);
+
+    void updatePin(Long userId, Long noteId, NotePinDTO request);
+
+    void updateReview(Long userId, Long noteId, NoteReviewDTO request);
 
     void updateSummary(Long userId, Long noteId, String summary);
 
-    AiSummaryResult generateSummary(Long userId, Long noteId);
+    AiAsyncJobDTO generateSummary(Long userId, Long noteId);
+
+    AiAsyncJobDTO organizeNote(Long userId, Long noteId);
+
+    AiAsyncJobDTO extractTasks(Long userId, Long noteId);
 }

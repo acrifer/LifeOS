@@ -1,5 +1,6 @@
 package com.lifeos.api.ai.client;
 
+import com.lifeos.api.ai.dto.AiAsyncJobUpdateDTO;
 import com.lifeos.api.ai.dto.NoteInternalUpdateSummaryDTO;
 import com.lifeos.common.response.Result;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -13,4 +14,8 @@ public interface NoteFeignClient {
     @PostMapping("/note/internal/{noteId}/summary")
     Result<Void> updateSummary(@PathVariable("noteId") Long noteId,
             @RequestBody NoteInternalUpdateSummaryDTO request);
+
+    @PostMapping("/note/internal/jobs/{jobId}/status")
+    Result<Void> updateJobStatus(@PathVariable("jobId") Long jobId,
+            @RequestBody AiAsyncJobUpdateDTO request);
 }

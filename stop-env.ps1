@@ -5,11 +5,17 @@ $ErrorActionPreference = "Stop"
 
 Ensure-EnvironmentLayout
 Assert-RequiredPaths
-Stop-RocketMQ
-Stop-Nacos
-Stop-Redis
-Stop-DockerDependencies
+
+$results = @(
+    (Stop-RocketMqBroker)
+    (Stop-RocketMqNameServer)
+    (Stop-Nacos)
+    (Stop-Redis)
+    (Stop-DockerManagedDependency -Name "mysql")
+)
 
 Write-Host ""
 Write-Host "Environment stop summary"
-Get-EnvironmentStatus | Format-Table -AutoSize
+$results | Format-Table -AutoSize
+Write-Host ""
+Get-EnvironmentStatus | Format-Table Name, Port, Reachable, PortPid, ManagedMode, ManagedPid, ManagedProcessAlive -AutoSize

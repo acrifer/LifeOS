@@ -2,6 +2,7 @@ package com.lifeos.behavior.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.lifeos.behavior.domain.entity.UserBehavior;
+import com.lifeos.behavior.domain.projection.DashboardNoteRow;
 import com.lifeos.behavior.domain.projection.BehaviorTrendRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -46,4 +47,108 @@ public interface BehaviorMapper extends BaseMapper<UserBehavior> {
             """)
     List<BehaviorTrendRow> selectRecentTrend(@Param("userId") Long userId,
             @Param("startTime") LocalDateTime startTime);
+
+    @Select("""
+            SELECT COUNT(*)
+            FROM (
+                SELECT review_state, next_review_at
+                FROM note_0
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT review_state, next_review_at
+                FROM note_1
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT review_state, next_review_at
+                FROM note_2
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT review_state, next_review_at
+                FROM note_3
+                WHERE user_id = #{userId}
+            ) notes
+            WHERE review_state IN ('REVIEW', 'EVERGREEN')
+            """)
+    Long countNotesToReview(@Param("userId") Long userId);
+
+    @Select("""
+            SELECT COUNT(*)
+            FROM (
+                SELECT create_time
+                FROM note_0
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT create_time
+                FROM note_1
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT create_time
+                FROM note_2
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT create_time
+                FROM note_3
+                WHERE user_id = #{userId}
+            ) notes
+            WHERE create_time >= #{startTime}
+            """)
+    Long countNotesCreatedSince(@Param("userId") Long userId,
+            @Param("startTime") LocalDateTime startTime);
+
+    @Select("""
+            SELECT COUNT(*)
+            FROM (
+                SELECT summary, tags
+                FROM note_0
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT summary, tags
+                FROM note_1
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT summary, tags
+                FROM note_2
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT summary, tags
+                FROM note_3
+                WHERE user_id = #{userId}
+            ) notes
+            WHERE summary IS NULL OR summary = '' OR tags IS NULL OR tags = ''
+            """)
+    Long countAiInbox(@Param("userId") Long userId);
+
+    @Select("""
+            SELECT COUNT(*)
+            FROM task
+            WHERE user_id = #{userId}
+              AND source_note_id IS NOT NULL
+              AND status <> 2
+            """)
+    Long countPendingExtractedTasks(@Param("userId") Long userId);
+
+    @Select("""
+            SELECT id, title, tags, summary, review_state, pinned, update_time
+            FROM (
+                SELECT id, title, tags, summary, review_state, pinned, update_time
+                FROM note_0
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT id, title, tags, summary, review_state, pinned, update_time
+                FROM note_1
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT id, title, tags, summary, review_state, pinned, update_time
+                FROM note_2
+                WHERE user_id = #{userId}
+                UNION ALL
+                SELECT id, title, tags, summary, review_state, pinned, update_time
+                FROM note_3
+                WHERE user_id = #{userId}
+            ) notes
+            ORDER BY pinned DESC, update_time DESC
+            LIMIT #{limit}
+            """)
+    List<DashboardNoteRow> selectRecentNotes(@Param("userId") Long userId,
+            @Param("limit") Integer limit);
 }

@@ -1,5 +1,20 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-& "$PSScriptRoot\stop-backend.ps1"
-& "$PSScriptRoot\stop-env.ps1"
+$errors = New-Object System.Collections.Generic.List[string]
+
+try {
+    & "$PSScriptRoot\stop-backend.ps1"
+} catch {
+    $errors.Add("stop-backend.ps1: $($_.Exception.Message)")
+}
+
+try {
+    & "$PSScriptRoot\stop-env.ps1"
+} catch {
+    $errors.Add("stop-env.ps1: $($_.Exception.Message)")
+}
+
+if ($errors.Count -gt 0) {
+    throw ($errors -join [Environment]::NewLine)
+}

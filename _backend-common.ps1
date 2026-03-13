@@ -74,6 +74,9 @@ $script:RedisPort = Get-ConfigIntValue -Name "REDIS_PORT" -Default 6379
 $script:NacosHost = Get-ConfigValue -Name "NACOS_HOST" -Default "127.0.0.1"
 $script:NacosPort = Get-ConfigIntValue -Name "NACOS_PORT" -Default 8848
 $script:NacosGrpcPort = Get-ConfigIntValue -Name "NACOS_GRPC_PORT" -Default 9848
+$script:RocketMqHost = Get-ConfigValue -Name "ROCKETMQ_NAMESRV_HOST" -Default "127.0.0.1"
+$script:RocketMqNamesrvPort = Get-ConfigIntValue -Name "ROCKETMQ_NAMESRV_PORT" -Default 9876
+$script:RocketMqBrokerPort = Get-ConfigIntValue -Name "ROCKETMQ_BROKER_PORT" -Default 10911
 
 $script:Services = @(
     [pscustomobject]@{ Name = "lifeos-user-service"; Module = "lifeos-user-service"; Port = (Get-ConfigIntValue -Name "LIFEOS_USER_SERVICE_PORT" -Default 8081); RequiresNacos = $true },
@@ -296,7 +299,9 @@ function Assert-Dependencies {
         @{ Name = "MySQL"; Host = $script:MySqlHost; Port = $script:MySqlPort },
         @{ Name = "Redis"; Host = $script:RedisHost; Port = $script:RedisPort },
         @{ Name = "Nacos HTTP"; Host = $script:NacosHost; Port = $script:NacosPort },
-        @{ Name = "Nacos gRPC"; Host = $script:NacosHost; Port = $script:NacosGrpcPort }
+        @{ Name = "Nacos gRPC"; Host = $script:NacosHost; Port = $script:NacosGrpcPort },
+        @{ Name = "RocketMQ NameServer"; Host = $script:RocketMqHost; Port = $script:RocketMqNamesrvPort },
+        @{ Name = "RocketMQ Broker"; Host = $script:RocketMqHost; Port = $script:RocketMqBrokerPort }
     )
 
     foreach ($check in $checks) {

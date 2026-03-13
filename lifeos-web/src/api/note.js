@@ -1,7 +1,6 @@
 import request from './request'
 
 export const noteApi = {
-    // Create note
     create(data) {
         return request({
             url: '/note',
@@ -10,7 +9,6 @@ export const noteApi = {
         })
     },
 
-    // Update note
     update(data) {
         return request({
             url: '/note',
@@ -19,7 +17,6 @@ export const noteApi = {
         })
     },
 
-    // Delete note
     delete(noteId) {
         return request({
             url: `/note/${noteId}`,
@@ -27,7 +24,6 @@ export const noteApi = {
         })
     },
 
-    // Get note detail
     getDetail(noteId) {
         return request({
             url: `/note/${noteId}`,
@@ -35,7 +31,6 @@ export const noteApi = {
         })
     },
 
-    // Get all user notes
     getList() {
         return request({
             url: '/note/list',
@@ -43,21 +38,74 @@ export const noteApi = {
         })
     },
 
-    // Search notes
-    search(keyword) {
+    search(params = {}) {
         return request({
             url: '/note/search',
             method: 'get',
-            params: { keyword }
+            params
         })
     },
 
-    // Generate or regenerate AI summary
+    getJobs(params = {}) {
+        return request({
+            url: '/note/jobs',
+            method: 'get',
+            params
+        })
+    },
+
+    getJob(jobId) {
+        return request({
+            url: `/note/jobs/${jobId}`,
+            method: 'get'
+        })
+    },
+
     generateSummary(noteId) {
         return request({
             url: `/note/${noteId}/summary`,
             method: 'post',
-            timeout: 15000
+            timeout: 8000
+        })
+    },
+
+    updatePin(noteId, pinned) {
+        return request({
+            url: `/note/${noteId}/pin`,
+            method: 'post',
+            data: { pinned }
+        })
+    },
+
+    updateReview(noteId, data) {
+        return request({
+            url: `/note/${noteId}/review`,
+            method: 'post',
+            data
+        })
+    },
+
+    organize(noteId) {
+        return request({
+            url: `/note/${noteId}/organize`,
+            method: 'post',
+            timeout: 8000
+        })
+    },
+
+    extractTasks(noteId) {
+        return request({
+            url: `/note/${noteId}/extract-tasks`,
+            method: 'post',
+            timeout: 8000
+        })
+    },
+
+    createWeeklyReview() {
+        return request({
+            url: '/note/weekly-review',
+            method: 'post',
+            timeout: 8000
         })
     }
 }

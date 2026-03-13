@@ -29,6 +29,14 @@ public class Note {
 
     private String summary; // AI Summary
 
+    private Boolean pinned;
+
+    private String reviewState;
+
+    private Date nextReviewAt;
+
+    private Date lastReviewedAt;
+
     // Note tags can be stored in content or a separate table, but we will rely on
     // full-text search or tags field if added.
     // Assuming simple content search for now.

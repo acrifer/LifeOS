@@ -1,117 +1,133 @@
 <template>
-  <div class="task-container">
-    <div class="header">
-      <div class="header-titles">
-        <h1>Task Management</h1>
-        <p>Organize your work, set deadlines, and track your progress.</p>
+  <div class="task-page">
+    <section class="task-hero">
+      <div>
+        <p class="eyebrow">任务层</p>
+        <h1>让笔记里的想法真正变成行动。</h1>
+        <p>
+          这里保留轻量任务管理，重点是让从笔记提取出来的行动项清晰可见、容易完成。
+        </p>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-primary" @click="showCreateModal = true">
-          <span class="icon">+</span> New Task
-        </button>
-        <button class="btn btn-ai" @click="handleAiGenerate">
-          <span class="icon">✨</span> AI Plan
-        </button>
-      </div>
-    </div>
+      <button class="primary-btn" @click="showCreateModal = true">新建任务</button>
+    </section>
 
-    <!-- Task List -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading tasks...</p>
-    </div>
+    <section class="stat-strip">
+      <article class="stat-card">
+        <strong>{{ pendingCount }}</strong>
+        <span>待完成</span>
+      </article>
+      <article class="stat-card">
+        <strong>{{ derivedCount }}</strong>
+        <span>来自笔记</span>
+      </article>
+      <article class="stat-card">
+        <strong>{{ completedCount }}</strong>
+        <span>已完成</span>
+      </article>
+    </section>
 
-    <div v-else-if="tasks.length === 0" class="empty-state glass-panel">
-      <div class="empty-icon">📝</div>
-      <h3>No tasks yet</h3>
-      <p>Get started by creating your first task or use AI to generate a plan.</p>
-      <button class="btn btn-primary mt-4" @click="showCreateModal = true">Create Task</button>
-    </div>
+    <section class="task-toolbar">
+      <label>
+        <span>视图</span>
+        <select v-model="viewMode">
+          <option value="all">全部任务</option>
+          <option value="derived">来自笔记</option>
+          <option value="manual">手动创建</option>
+          <option value="completed">已完成</option>
+        </select>
+      </label>
+      <label>
+        <span>搜索</span>
+        <input v-model="searchKeyword" type="text" placeholder="搜索任务标题或来源笔记" />
+      </label>
+    </section>
 
-    <div v-else class="task-grid">
-      <div 
-        v-for="task in tasks" 
-        :key="task.id" 
-        class="task-card glass-panel"
-        :class="{ 'completed': task.status === 2 }"
+    <section v-if="loading" class="empty-panel">正在加载任务...</section>
+    <section v-else-if="filteredTasks.length === 0" class="empty-panel">
+      <h2>当前视图下没有任务</h2>
+      <p>你可以手动创建任务，或者从笔记里提取行动项。</p>
+    </section>
+    <section v-else class="task-grid">
+      <article
+        v-for="task in filteredTasks"
+        :key="task.id"
+        class="task-card"
+        :class="{ completed: task.status === 2 }"
       >
-        <div class="task-header">
-          <h3 class="task-title" :class="{ 'strike': task.status === 2 }">{{ task.title }}</h3>
-          <span class="status-badge" :class="getStatusClass(task.status)">
-            {{ getStatusText(task.status) }}
-          </span>
+        <div class="task-card-top">
+          <span class="status-pill" :class="statusClass(task.status)">{{ statusLabel(task.status) }}</span>
+          <div class="card-actions">
+            <button v-if="task.status !== 2" class="ghost-btn" @click="completeTask(task.id)">完成</button>
+            <button class="ghost-btn danger" @click="deleteTask(task.id)">删除</button>
+          </div>
         </div>
-        
-        <p class="task-desc">{{ task.description || 'No description provided.' }}</p>
-        
+
+        <h3>{{ task.title }}</h3>
+        <p class="task-description">{{ task.description || '暂无任务说明。' }}</p>
+
+        <div v-if="task.sourceNoteId" class="source-box">
+          <span class="source-label">来源笔记</span>
+          <strong>{{ sourceNoteTitle(task.sourceNoteId) }}</strong>
+        </div>
+
         <div class="task-meta">
-          <div v-if="task.deadline" class="meta-item deadline" :class="{ 'overdue': isOverdue(task.deadline) && task.status !== 2 }">
-            <span class="icon">⏱</span> {{ formatDate(task.deadline) }}
-          </div>
-          
-          <div class="tags-container" v-if="task.tags">
-            <span v-for="tag in task.tags.split(',')" :key="tag" class="tag">#{{ tag.trim() }}</span>
-          </div>
+          <span v-if="task.deadline">截止 {{ formatDate(task.deadline) }}</span>
+          <span>{{ task.sourceNoteId ? '知识任务' : '手动任务' }}</span>
         </div>
 
-        <div class="task-actions" v-if="task.status !== 2">
-          <button class="btn-icon check" @click="completeTask(task.id)" title="Complete Task">
-            ✓
-          </button>
-          <button class="btn-icon delete" @click="deleteTask(task.id)" title="Delete Task">
-            ✕
+        <div class="tag-list">
+          <span v-for="tag in splitTags(task.tags)" :key="tag" class="tag-chip">#{{ tag }}</span>
+        </div>
+      </article>
+    </section>
+
+    <div v-if="showCreateModal" class="modal-backdrop" @click.self="showCreateModal = false">
+      <div class="modal-card">
+        <h2>创建手动任务</h2>
+        <div class="form-grid">
+          <label>
+            <span>标题</span>
+            <input v-model="newTask.title" type="text" placeholder="任务标题" />
+          </label>
+          <label>
+            <span>截止时间</span>
+            <input v-model="newTask.deadline" type="datetime-local" />
+          </label>
+        </div>
+        <label>
+          <span>说明</span>
+          <textarea v-model="newTask.description" rows="4" placeholder="补充任务说明"></textarea>
+        </label>
+        <label>
+          <span>标签</span>
+          <input v-model="newTask.tags" type="text" placeholder="多个标签用逗号分隔" />
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-btn" @click="showCreateModal = false">取消</button>
+          <button class="primary-btn" :disabled="submitting" @click="submitTask">
+            {{ submitting ? '保存中...' : '创建任务' }}
           </button>
         </div>
       </div>
     </div>
-
-    <!-- Create Modal -->
-    <div class="modal-backdrop" v-if="showCreateModal" @click.self="showCreateModal = false">
-      <div class="modal glass-panel">
-        <h2>Create New Task</h2>
-        <form @submit.prevent="submitTask">
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input type="text" v-model="newTask.title" required placeholder="e.g., Learn Redis" />
-          </div>
-          
-          <div class="form-group">
-            <label>Description</label>
-            <textarea v-model="newTask.description" rows="3" placeholder="Add some details..."></textarea>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Deadline</label>
-              <input type="datetime-local" v-model="newTask.deadline" />
-            </div>
-            <div class="form-group">
-              <label>Tags (Comma separated)</label>
-              <input type="text" v-model="newTask.tags" placeholder="e.g., Backend, Study" />
-            </div>
-          </div>
-          
-          <div class="modal-actions">
-            <button type="button" class="btn btn-ghost" @click="showCreateModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="submitting">
-              {{ submitting ? 'Saving...' : 'Create Task' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { noteApi } from '@/api/note'
 import { taskApi } from '@/api/task'
 
-const tasks = ref([])
+const route = useRoute()
+
 const loading = ref(true)
-const showCreateModal = ref(false)
 const submitting = ref(false)
+const showCreateModal = ref(false)
+const viewMode = ref('all')
+const searchKeyword = ref('')
+const tasks = ref([])
+const noteMap = ref({})
 
 const newTask = ref({
   title: '',
@@ -120,11 +136,38 @@ const newTask = ref({
   tags: ''
 })
 
+const filteredTasks = computed(() => {
+  return tasks.value.filter(task => {
+    if (viewMode.value === 'derived' && !task.sourceNoteId) {
+      return false
+    }
+    if (viewMode.value === 'manual' && task.sourceNoteId) {
+      return false
+    }
+    if (viewMode.value === 'completed' && task.status !== 2) {
+      return false
+    }
+    if (!searchKeyword.value.trim()) {
+      return true
+    }
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    const sourceTitle = sourceNoteTitle(task.sourceNoteId).toLowerCase()
+    return (
+      (task.title || '').toLowerCase().includes(keyword) ||
+      (task.description || '').toLowerCase().includes(keyword) ||
+      sourceTitle.includes(keyword)
+    )
+  })
+})
+
+const pendingCount = computed(() => tasks.value.filter(task => task.status !== 2).length)
+const completedCount = computed(() => tasks.value.filter(task => task.status === 2).length)
+const derivedCount = computed(() => tasks.value.filter(task => task.sourceNoteId).length)
+
 const fetchTasks = async () => {
   loading.value = true
   try {
-    const res = await taskApi.getList()
-    tasks.value = res || []
+    tasks.value = await taskApi.getList()
   } catch (error) {
     console.error('Failed to fetch tasks', error)
   } finally {
@@ -132,450 +175,399 @@ const fetchTasks = async () => {
   }
 }
 
+const fetchNotes = async () => {
+  try {
+    const notes = await noteApi.getList()
+    noteMap.value = notes.reduce((accumulator, note) => {
+      accumulator[String(note.id)] = note.title || '未命名笔记'
+      return accumulator
+    }, {})
+  } catch (error) {
+    console.error('Failed to fetch note titles for tasks', error)
+  }
+}
+
 const submitTask = async () => {
-  if (!newTask.value.title) return
-  
+  if (!newTask.value.title.trim()) {
+    return
+  }
   submitting.value = true
   try {
-    const payload = { ...newTask.value }
-    if (payload.deadline) {
-      payload.deadline = new Date(payload.deadline).toISOString()
-    } else {
-      payload.deadline = null
-    }
-    
-    await taskApi.create(payload)
-    showCreateModal.value = false
-    
-    // Reset form
+    await taskApi.create({
+      title: newTask.value.title,
+      description: newTask.value.description,
+      deadline: newTask.value.deadline ? new Date(newTask.value.deadline).toISOString() : null,
+      tags: newTask.value.tags
+    })
     newTask.value = { title: '', description: '', deadline: '', tags: '' }
-    
-    // Refresh list
-    fetchTasks()
+    showCreateModal.value = false
+    await fetchTasks()
   } catch (error) {
-    alert('Failed to create task')
+    console.error('Failed to create task', error)
   } finally {
     submitting.value = false
   }
 }
 
-const completeTask = async (id) => {
+const completeTask = async (taskId) => {
   try {
-    await taskApi.complete(id)
-    fetchTasks()
+    await taskApi.complete(taskId)
+    await fetchTasks()
   } catch (error) {
-    alert('Failed to complete task')
+    console.error('Failed to complete task', error)
   }
 }
 
-const deleteTask = async (id) => {
-  if (!confirm('Are you sure you want to delete this task?')) return
+const deleteTask = async (taskId) => {
+  if (!confirm('确认删除这个任务吗？')) {
+    return
+  }
   try {
-    await taskApi.delete(id)
-    fetchTasks()
+    await taskApi.delete(taskId)
+    await fetchTasks()
   } catch (error) {
-    alert('Failed to delete task')
+    console.error('Failed to delete task', error)
   }
 }
 
-const handleAiGenerate = () => {
-  alert('AI Plan Generation will be implemented when the AI service is ready!')
-}
-
-// Helpers
-const getStatusText = (status) => {
-  switch(status) {
-    case 0: return 'Pending'
-    case 1: return 'In Progress'
-    case 2: return 'Completed'
-    default: return 'Unknown'
+const statusLabel = (status) => {
+  switch (status) {
+    case 2:
+      return '已完成'
+    case 1:
+      return '进行中'
+    default:
+      return '待处理'
   }
 }
 
-const getStatusClass = (status) => {
-  switch(status) {
-    case 0: return 'badge-pending'
-    case 1: return 'badge-progress'
-    case 2: return 'badge-completed'
-    default: return ''
+const statusClass = (status) => {
+  switch (status) {
+    case 2:
+      return 'completed'
+    case 1:
+      return 'progress'
+    default:
+      return 'pending'
   }
 }
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+const sourceNoteTitle = (noteId) => {
+  if (!noteId) {
+    return '手动任务'
+  }
+  return noteMap.value[String(noteId)] || `笔记 #${noteId}`
 }
 
-const isOverdue = (dateStr) => {
-  if (!dateStr) return false
-  return new Date(dateStr) < new Date()
+const splitTags = (value) =>
+  (value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+
+const formatDate = (value) => {
+  if (!value) {
+    return '未设置截止时间'
+  }
+  return new Date(value).toLocaleString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-onMounted(() => {
-  fetchTasks()
+watch(
+  () => route.query.view,
+  value => {
+    if (typeof value === 'string' && ['all', 'derived', 'manual', 'completed'].includes(value)) {
+      viewMode.value = value
+    }
+  },
+  { immediate: true }
+)
+
+onMounted(async () => {
+  await Promise.all([fetchTasks(), fetchNotes()])
 })
 </script>
 
 <style scoped>
-.task-container {
-  padding: 40px;
+.task-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 32px;
 }
 
-.header {
+.task-hero {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 40px;
+  gap: 24px;
+  align-items: flex-end;
+  background: linear-gradient(135deg, #111827, #1d4ed8);
+  color: white;
+  border-radius: 28px;
+  padding: 32px;
+  margin-bottom: 20px;
 }
 
-.header h1 {
-  font-size: 32px;
-  color: #1e293b;
-  margin: 0 0 8px 0;
-  font-weight: 800;
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
 }
 
-.header p {
-  color: #64748b;
+.task-hero h1 {
+  margin: 0 0 12px;
+  font-size: 38px;
+  line-height: 1.15;
+  max-width: 760px;
+}
+
+.task-hero p {
   margin: 0;
-  font-size: 16px;
+  max-width: 760px;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.7;
 }
 
-.header-actions {
-  display: flex;
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  margin-bottom: 20px;
 }
 
-.btn {
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
+.stat-card,
+.task-toolbar,
+.task-card,
+.empty-panel,
+.modal-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+}
+
+.stat-card {
+  padding: 20px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
 }
 
-.btn-primary {
-  background: #6366f1;
-  color: white;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+.stat-card strong {
+  font-size: 34px;
+  color: #0f172a;
 }
 
-.btn-primary:hover {
-  background: #4f46e5;
-  transform: translateY(-2px);
-}
-
-.btn-ai {
-  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
-}
-
-.btn-ai:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(168, 85, 247, 0.4);
-}
-
-.btn-ghost {
-  background: transparent;
+.stat-card span {
   color: #64748b;
 }
 
-.btn-ghost:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+.task-toolbar {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.glass-panel {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
+.task-toolbar label,
+.form-grid label,
+.modal-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 13px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font: inherit;
 }
 
 .task-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  gap: 18px;
 }
 
 .task-card {
-  padding: 24px;
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-}
-
-.task-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  gap: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
 .task-card.completed {
   opacity: 0.7;
-  background: #f8fafc;
 }
 
-.task-header {
+.task-card-top,
+.card-actions,
+.modal-actions {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  gap: 12px;
 }
 
-.task-title {
+.status-pill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pill.pending {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-pill.progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-pill.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ghost-btn,
+.primary-btn {
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ghost-btn {
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.ghost-btn.danger {
+  color: #b91c1c;
+}
+
+.primary-btn {
+  background: #1d4ed8;
+  color: white;
+  border-radius: 16px;
+  padding: 12px 18px;
+  font-weight: 700;
+}
+
+.task-card h3,
+.modal-card h2 {
   margin: 0;
-  font-size: 18px;
   color: #0f172a;
-  font-weight: 700;
-  line-height: 1.4;
-  padding-right: 12px;
 }
 
-.task-title.strike {
-  text-decoration: line-through;
-  color: #94a3b8;
-}
-
-.status-badge {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.badge-pending { background: #fee2e2; color: #ef4444; }
-.badge-progress { background: #fef3c7; color: #d97706; }
-.badge-completed { background: #dcfce7; color: #16a34a; }
-
-.task-desc {
-  color: #64748b;
-  font-size: 14px;
+.task-description {
+  margin: 0;
+  color: #475569;
   line-height: 1.6;
-  margin: 0 0 20px 0;
-  flex-grow: 1;
+}
+
+.source-box {
+  padding: 14px;
+  border-radius: 18px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.source-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #1d4ed8;
+  margin-bottom: 6px;
 }
 
 .task-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.meta-item {
-  font-size: 12px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
-  background: #f1f5f9;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-weight: 500;
+  color: #64748b;
+  font-size: 13px;
 }
 
-.meta-item.overdue {
-  background: #fef2f2;
-  color: #ef4444;
-}
-
-.tags-container {
+.tag-list {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
-}
-
-.tag {
-  font-size: 11px;
-  color: #4f46e5;
-  background: #e0e7ff;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 600;
-}
-
-.task-actions {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  display: flex;
   gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  background: white;
-  padding: 4px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.task-card:hover .task-actions {
-  opacity: 1;
+.tag-chip {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.btn-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  transition: all 0.2s;
-  font-size: 14px;
+.empty-panel {
+  padding: 80px 24px;
+  text-align: center;
+  color: #64748b;
 }
 
-.btn-icon.check { background: #10b981; }
-.btn-icon.check:hover { background: #059669; transform: scale(1.1); }
-.btn-icon.delete { background: #ef4444; }
-.btn-icon.delete:hover { background: #dc2626; transform: scale(1.1); }
-
-/* Modal Styles */
 .modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  animation: fadeIn 0.3s;
+  padding: 24px;
+  z-index: 40;
 }
 
-.modal {
-  width: 100%;
-  max-width: 500px;
-  padding: 32px;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+.modal-card {
+  width: min(560px, 100%);
+  padding: 24px;
 }
 
-.modal h2 {
-  margin: 0 0 24px 0;
-  font-size: 24px;
-  color: #1e293b;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-row {
-  display: flex;
-  gap: 20px;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-label {
-  display: block;
-  font-size: 13px;
-  color: #475569;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.required { color: #ef4444; }
-
-input, textarea {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
-  transition: all 0.2s;
-  background: #f8fafc;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #6366f1;
-  background: white;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
 }
 
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 32px;
+  margin-top: 18px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 80px 40px;
-}
+@media (max-width: 900px) {
+  .task-page {
+    padding: 20px;
+  }
 
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: 24px;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  font-size: 24px;
-  color: #1e293b;
-  margin: 0 0 12px 0;
-}
-
-.empty-state p {
-  color: #64748b;
-  margin: 0;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.loading-state {
-  text-align: center;
-  padding: 80px;
-  color: #64748b;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #6366f1;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
-}
-
-.mt-4 { margin-top: 24px; }
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  .task-hero,
+  .task-toolbar,
+  .form-grid,
+  .stat-strip {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

@@ -9,4 +9,5 @@ public class TaskCreateDTO {
     private String description;
     private Date deadline;
     private String tags;
+    private Long sourceNoteId;
 }

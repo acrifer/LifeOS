@@ -3,11 +3,16 @@ package com.lifeos.behavior.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lifeos.api.behavior.dto.BehaviorEventCommand;
 import com.lifeos.api.behavior.dto.BehaviorTrendItemDTO;
+import com.lifeos.api.behavior.dto.DashboardRecentNoteDTO;
 import com.lifeos.api.behavior.dto.DashboardStatsDTO;
+import com.lifeos.api.behavior.dto.DashboardTagStatDTO;
 import com.lifeos.behavior.domain.entity.UserBehavior;
 import com.lifeos.behavior.domain.projection.BehaviorTrendRow;
+import com.lifeos.behavior.domain.projection.DashboardNoteRow;
 import com.lifeos.behavior.mapper.BehaviorMapper;
 import com.lifeos.behavior.service.BehaviorService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -15,16 +20,22 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class BehaviorServiceImpl extends ServiceImpl<BehaviorMapper, UserBehavior> implements BehaviorService {
 
     private static final String FINISH_TASK = "FINISH_TASK";
+    private static final String ORGANIZE_NOTE = "ORGANIZE_NOTE";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM-dd");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
     @Override
     public void recordEvent(BehaviorEventCommand command) {
@@ -33,18 +44,32 @@ public class BehaviorServiceImpl extends ServiceImpl<BehaviorMapper, UserBehavio
         }
 
         UserBehavior behavior = new UserBehavior();
+        behavior.setEventId(resolveEventId(command.getEventId()));
         behavior.setUserId(command.getUserId());
         behavior.setActionType(command.getActionType().trim().toUpperCase(Locale.ROOT));
         behavior.setTargetId(command.getTargetId());
-        this.save(behavior);
+        try {
+            this.save(behavior);
+        } catch (DuplicateKeyException ex) {
+            log.info("Ignored duplicate behavior event {}", behavior.getEventId());
+        }
     }
 
     @Override
     public DashboardStatsDTO getDashboardStats(Long userId) {
+        List<DashboardNoteRow> recentNotes = baseMapper.selectRecentNotes(userId, 60);
+
         DashboardStatsDTO stats = new DashboardStatsDTO();
         stats.setPendingTaskCount(defaultZero(baseMapper.countPendingTasks(userId)));
         stats.setNoteCount(defaultZero(baseMapper.countNotes(userId)));
+        stats.setNotesToReviewCount(defaultZero(baseMapper.countNotesToReview(userId)));
+        stats.setWeekNewNoteCount(defaultZero(baseMapper.countNotesCreatedSince(userId, LocalDateTime.now().minusDays(6))));
+        stats.setWeekOrganizedNoteCount(defaultZero(baseMapper.countEventsSince(userId, ORGANIZE_NOTE, LocalDateTime.now().minusDays(6))));
         stats.setWeekCompletedTaskCount(defaultZero(baseMapper.countEventsSince(userId, FINISH_TASK, LocalDateTime.now().minusDays(6))));
+        stats.setPendingExtractedTaskCount(defaultZero(baseMapper.countPendingExtractedTasks(userId)));
+        stats.setAiInboxCount(defaultZero(baseMapper.countAiInbox(userId)));
+        stats.setTopTags(buildTopTags(recentNotes));
+        stats.setRecentNotes(buildRecentNotes(recentNotes));
         stats.setRecentTrend(buildRecentTrend(userId));
         return stats;
     }
@@ -67,5 +92,59 @@ public class BehaviorServiceImpl extends ServiceImpl<BehaviorMapper, UserBehavio
 
     private Long defaultZero(Long value) {
         return value == null ? 0L : value;
+    }
+
+    private String resolveEventId(String eventId) {
+        if (StringUtils.hasText(eventId)) {
+            return eventId.trim();
+        }
+        return UUID.randomUUID().toString();
+    }
+
+    private List<DashboardTagStatDTO> buildTopTags(List<DashboardNoteRow> recentNotes) {
+        return recentNotes.stream()
+                .map(DashboardNoteRow::getTags)
+                .filter(StringUtils::hasText)
+                .flatMap(tags -> List.of(tags.split(",")).stream())
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.groupingBy(tag -> tag, Collectors.counting()))
+                .entrySet()
+                .stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
+                .limit(6)
+                .map(entry -> {
+                    DashboardTagStatDTO dto = new DashboardTagStatDTO();
+                    dto.setTag(entry.getKey());
+                    dto.setCount(entry.getValue());
+                    return dto;
+                })
+                .toList();
+    }
+
+    private List<DashboardRecentNoteDTO> buildRecentNotes(List<DashboardNoteRow> recentNotes) {
+        return recentNotes.stream()
+                .limit(5)
+                .map(note -> {
+                    DashboardRecentNoteDTO dto = new DashboardRecentNoteDTO();
+                    dto.setId(String.valueOf(note.getId()));
+                    dto.setTitle(StringUtils.hasText(note.getTitle()) ? note.getTitle() : "Untitled Note");
+                    dto.setTags(note.getTags());
+                    dto.setReviewState(note.getReviewState());
+                    dto.setPinned(Boolean.TRUE.equals(note.getPinned()));
+                    dto.setHasSummary(StringUtils.hasText(note.getSummary()));
+                    dto.setUpdatedAt(formatDateTime(note.getUpdateTime()));
+                    return dto;
+                })
+                .toList();
+    }
+
+    private String formatDateTime(Date value) {
+        if (value == null) {
+            return "";
+        }
+        return DATE_TIME_FORMATTER.format(value.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDateTime());
     }
 }

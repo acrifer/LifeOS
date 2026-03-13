@@ -26,5 +26,28 @@ export const userApi = {
             url: '/user/info',
             method: 'get'
         })
+    },
+
+    updateProfile(data) {
+        return request({
+            url: '/user/profile',
+            method: 'put',
+            data
+        })
+    },
+
+    updatePassword(data) {
+        return request({
+            url: '/user/password',
+            method: 'put',
+            data
+        })
+    },
+
+    logout() {
+        return request({
+            url: '/user/logout',
+            method: 'post'
+        })
     }
 }

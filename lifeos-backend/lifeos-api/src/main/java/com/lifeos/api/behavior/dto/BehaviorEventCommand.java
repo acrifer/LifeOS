@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 @Data
 public class BehaviorEventCommand implements Serializable {
+    private String eventId;
     private Long userId;
     private String actionType;
     private Long targetId;
